@@ -2,6 +2,9 @@
 //MOSI - Pin 11  MISO - Pin 12  
 //VCC - 5V , GND- GND
 
+const int redbtn = 9;   //left btn
+const int whitebtn = 8; //right btn
+
 #include <SPI.h>
 #include <SD.h>
 #include <SoftwareSerial.h>                        // 시리얼 통신에 필요한 라이브러리를 불러옵니다.
@@ -27,6 +30,8 @@ GND    ---------------------- GND
 void setup()
  {
   int i;
+  pinMode(redbtn,INPUT_PULLUP);
+  pinMode(whitebtn,INPUT_PULLUP);
   Serial.begin(115200);                                     // 아두이노의 시리얼 속도를 9600 으로 설정
   BTSerial.begin(115200);                                  // 블루투스의 시리얼 속도를 9600 으로 설정
  //SD카드 초기화 SD.begin(4)는 CS핀 번호
@@ -38,9 +43,16 @@ void setup()
   //파일 쓰기 이어서 써진다. 전에꺼 지우고, 다시 만들어서 해야되.
   //myFile = SD.open("test1.txt",FILE_WRITE);
   myFile = SD.open("test1.txt");
-    if(myFile){
-    while(myFile.available()){
-     byte ch = myFile.read();
+
+}
+
+void loop()
+{
+  int i;
+
+        if(myFile){
+          if(digitalRead(whitebtn) == LOW && myFile.available()){
+       byte ch = myFile.read();
        for(i=5;i>=0;i--)
                 {
                     if(((ch>>i)&0x1) == 1)
@@ -54,14 +66,25 @@ void setup()
          Serial.println("========");
          num++;
          Serial.println(num);
+          }
+           if(digitalRead(redbtn) == LOW && myFile.available()){
+            (&myFile-1);
+       byte ch = myFile.read();
+       for(i=5;i>=0;i--)
+                {
+                    if(((ch>>i)&0x1) == 1)
+                       Serial.print('O');  
+                  else if(((ch>>i)&0x1)==0)
+                     Serial.print('X');  
+                if(i==4 || i==2)
+                   Serial.println(); 
+          }
+         Serial.println("");
+         Serial.println("========");
+         num++;
+         Serial.println(num);
+          }
     }
-  }
-}
-
-void loop()
-{
-  int i;
-
   if (BTSerial.available()){
     byte ch=(byte)BTSerial.read();
    // Serial.println(ch);
@@ -105,5 +128,28 @@ void loop()
      // Serial.println(num);
     }
   }
-
+  while(status == 2)  //파일 전송 및 입력이 다 끝났다면... 
+  {
+        if(myFile){
+          if(digitalRead(whitebtn) == LOW && myFile.available()){
+       byte ch = myFile.read();
+       for(i=5;i>=0;i--)
+                {
+                    if(((ch>>i)&0x1) == 1)
+                       Serial.print('O');  
+                  else if(((ch>>i)&0x1)==0)
+                     Serial.print('X');  
+                if(i==4 || i==2)
+                   Serial.println(); 
+          }
+         Serial.println("");
+         Serial.println("========");
+         num++;
+         Serial.println(num);
+          }
+    }
+  
+  }
+    delay(175);    //채터링 방지 이거를 파일 전송및 입력이 다끝난 후..
+    // 파일을 읽어 올 때 안에다가 넣어야 하지만 지금 실험중이기 때문에 밖에 꺼내놓음.
 }
