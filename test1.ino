@@ -4,7 +4,8 @@
 
 const int redbtn = 9;   //left btn
 const int whitebtn = 8; //right btn
-
+unsigned long pos = 0;    //현재 위치 변수.
+  
 #include <SPI.h>
 #include <SD.h>
 #include <SoftwareSerial.h>                        // 시리얼 통신에 필요한 라이브러리를 불러옵니다.
@@ -41,50 +42,48 @@ void setup()
     // test.txt 파일을 쓰기 위해서 Open한다
   //여기서 블루투스 로부터 파일 명을 받아 온 후 만들어야 할듯.
   //파일 쓰기 이어서 써진다. 전에꺼 지우고, 다시 만들어서 해야되.
-  //myFile = SD.open("test1.txt",FILE_WRITE);
-  myFile = SD.open("test1.txt");
+  myFile = SD.open("test1.txt",FILE_WRITE);
+  
 
 }
 
+//파일 입력을 할 때 처음 입력한 부분이 사라지는 현상이 있는듯...
+//노란의 ㄴ 이 사라짐... 이걸 해결할 방법을 모색해야 할듯..
 void loop()
 {
   int i;
-
+/*
         if(myFile){
-          if(digitalRead(whitebtn) == LOW && myFile.available()){
-       byte ch = myFile.read();
-       for(i=5;i>=0;i--)
-                {
-                    if(((ch>>i)&0x1) == 1)
-                       Serial.print('O');  
-                  else if(((ch>>i)&0x1)==0)
-                     Serial.print('X');  
-                if(i==4 || i==2)
-                   Serial.println(); 
+          if(status == 0) {  //임시 status 값. 처음 읽는거 확인.
+            status = 1;
+           byte ch = myFile.read();
+            Print(ch);
+          Serial.println(myFile.position());
+         Serial.println(pos);
           }
-         Serial.println("");
-         Serial.println("========");
-         num++;
-         Serial.println(num);
+          
+          if(status == 1){    //한번 읽고 난뒤에 버튼을 누른다면..
+          if(digitalRead(whitebtn) == LOW && myFile.available()){
+       pos++;
+        myFile.seek(pos);
+       byte ch = myFile.read();
+          Print(ch);
+         //Serial.println(num);
+         Serial.println(myFile.position());
+         Serial.println(pos);
           }
            if(digitalRead(redbtn) == LOW && myFile.available()){
-            (&myFile-1);
-       byte ch = myFile.read();
-       for(i=5;i>=0;i--)
-                {
-                    if(((ch>>i)&0x1) == 1)
-                       Serial.print('O');  
-                  else if(((ch>>i)&0x1)==0)
-                     Serial.print('X');  
-                if(i==4 || i==2)
-                   Serial.println(); 
-          }
-         Serial.println("");
-         Serial.println("========");
-         num++;
-         Serial.println(num);
+       pos--;
+       myFile.seek(pos);
+        byte ch = myFile.read();
+            Print(ch);
+         //Serial.println(num);
+         Serial.println(myFile.position());
+         Serial.println(pos);
           }
     }
+        }
+        */
   if (BTSerial.available()){
     byte ch=(byte)BTSerial.read();
    // Serial.println(ch);
@@ -96,17 +95,7 @@ void loop()
     while(status == 1){    
       ch=(byte)BTSerial.read();
       if(((ch>>6)&0b11) == 0b00){
-     for(i=5;i>=0;i--)
-                {
-                    if(((ch>>i)&0x1) == 1)
-                       Serial.print('O');  
-                  else if(((ch>>i)&0x1)==0)
-                     Serial.print('X');  
-                if(i==4 || i==2)
-                   Serial.println(); 
-          }
-         Serial.println("");
-         Serial.println("========");
+            //Print(ch);
          buffer[(num%50)]=ch;
          num++;
          Serial.println(num);
@@ -117,7 +106,7 @@ void loop()
          
       }
         else if( ((ch>>6)&0b11) == 0b01){
-        status = 2;
+        status = 3;
         Serial.println("Here3");
         for(int i=0;i<(num%50);i++)
           myFile.write(buffer[i]);
@@ -128,12 +117,27 @@ void loop()
      // Serial.println(num);
     }
   }
-  while(status == 2)  //파일 전송 및 입력이 다 끝났다면... 
+  while(status == 2 || status == 3)  //파일 전송 및 입력이 다 끝났다면... 
   {
+    if(status == 3){
+    myFile = SD.open("test1.txt",FILE_READ);      //파일 여는 것을 한번만 실행하기 위해서.
+    status = 2; 
+    continue;
+    }
         if(myFile){
-          if(digitalRead(whitebtn) == LOW && myFile.available()){
+          while(myFile.available()){
        byte ch = myFile.read();
-       for(i=5;i>=0;i--)
+            Print(ch);
+          }
+    }
+  
+  }
+    delay(175);    //채터링 방지 이거를 파일 전송및 입력이 다끝난 후..
+    // 파일을 읽어 올 때 안에다가 넣어야 하지만 지금 실험중이기 때문에 밖에 꺼내놓음.
+}
+void Print(char ch){
+ int i;
+         for(i=5;i>=0;i--)
                 {
                     if(((ch>>i)&0x1) == 1)
                        Serial.print('O');  
@@ -144,12 +148,5 @@ void loop()
           }
          Serial.println("");
          Serial.println("========");
-         num++;
-         Serial.println(num);
-          }
-    }
-  
-  }
-    delay(175);    //채터링 방지 이거를 파일 전송및 입력이 다끝난 후..
-    // 파일을 읽어 올 때 안에다가 넣어야 하지만 지금 실험중이기 때문에 밖에 꺼내놓음.
 }
+
