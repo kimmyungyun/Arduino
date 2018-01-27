@@ -44,7 +44,6 @@ void setup()
   //파일 쓰기 이어서 써진다. 전에꺼 지우고, 다시 만들어서 해야되.
   myFile = SD.open("test1.txt", FILE_WRITE);
 
-
 }
 
 //파일 입력을 할 때 처음 입력한 부분이 사라지는 현상이 있는듯...
@@ -52,38 +51,6 @@ void setup()
 void loop()
 {
   int i;
-/*    //이부분이 계속 해서 데이터 읽는 부분. 으로 만들긴 했는데 아직 실험용.
-    if (myFile) {
-      if (status == 0) { //임시 status 값. 처음 읽는거 확인.
-        status = 1;
-        byte ch = myFile.read();
-        Print(ch);
-        Serial.println(myFile.position());  //myFile.position() 함수가 현재 위치를 반환.
-        Serial.println(pos);                //맨 처음 부분이 1인듯. 원래 0부터 나올텐데 여기서는 0으로 돌아가질 않음.
-      }
-
-      if (status == 1) {  //한번 읽고 난뒤에 버튼을 누른다면..
-        if (digitalRead(whitebtn) == LOW && myFile.available()) {
-          pos++;
-          myFile.seek(pos);
-          byte ch = myFile.read();
-          Print(ch);
-          //Serial.println(num);
-          Serial.println(myFile.position());
-          Serial.println(pos);
-        }
-        if (digitalRead(redbtn) == LOW && myFile.available()) {
-          pos--;
-          myFile.seek(pos);
-          byte ch = myFile.read();
-          Print(ch);
-          //Serial.println(num);
-          Serial.println(myFile.position());
-          Serial.println(pos);
-        }
-      }
-    }
-*/
   if (BTSerial.available()) {
     byte ch = (byte)BTSerial.read();
     // Serial.println(ch);
@@ -118,7 +85,7 @@ void loop()
       // Serial.println(num);
     }
   }
-  while (status == 2 || status == 3) //파일 전송 및 입력이 다 끝났다면...
+  while (status == 2 || status == 3 || status == 4) //파일 전송 및 입력이 다 끝났다면...
   {
     if (status == 3) {
       myFile = SD.open("test1.txt", FILE_READ);     //파일 여는 것을 한번만 실행하기 위해서.
@@ -126,12 +93,34 @@ void loop()
       continue;
     }
     if (myFile) {
-      while (myFile.available()) {
+      if (status == 2) { //임시 status 값. 처음 읽는거 확인.
+        status = 4;
         byte ch = myFile.read();
         Print(ch);
+        Serial.println(myFile.position());  //myFile.position() 함수가 현재 위치를 반환.
+        Serial.println(pos);                //맨 처음 부분이 1인듯. 원래 0부터 나올텐데 여기서는 0으로 돌아가질 않음.
+      }
+      if (status == 4) {  //한번 읽고 난뒤에 버튼을 누른다면..
+        if (digitalRead(whitebtn) == LOW && myFile.available()) {
+          pos++;
+          myFile.seek(pos);
+          byte ch = myFile.read();
+          Print(ch);
+          //Serial.println(num);
+          Serial.println(myFile.position());
+          Serial.println(pos);
+        }
+        if (digitalRead(redbtn) == LOW && myFile.available()) {
+          pos--;
+          myFile.seek(pos);
+          byte ch = myFile.read();
+          Print(ch);
+          //Serial.println(num);
+          Serial.println(myFile.position());
+          Serial.println(pos);
+        }
       }
     }
-
   }
   delay(175);    //채터링 방지 이거를 파일 전송및 입력이 다끝난 후..
   // 파일을 읽어 올 때 안에다가 넣어야 하지만 지금 실험중이기 때문에 밖에 꺼내놓음.
