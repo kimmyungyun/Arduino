@@ -30,7 +30,7 @@ byte buffer[50];
 */
 void setup()
 {
-  int i;
+  int i = 0;
   pinMode(redbtn, INPUT_PULLUP);
   pinMode(whitebtn, INPUT_PULLUP);
   Serial.begin(115200);                                     // 아두이노의 시리얼 속도를 9600 으로 설정
@@ -39,11 +39,27 @@ void setup()
   if (!SD.begin(4)) {
     return;
   }
+
+  if (SD.exists("test1.txt"))
+    SD.remove("test1.txt");
   // test.txt 파일을 쓰기 위해서 Open한다
   //여기서 블루투스 로부터 파일 명을 받아 온 후 만들어야 할듯.
   //파일 쓰기 이어서 써진다. 전에꺼 지우고, 다시 만들어서 해야되.
   myFile = SD.open("test1.txt", FILE_WRITE);
+  /*
+    myFile = SD.open("test1.txt");
+    if (myFile) {
+     Serial.println("test1.txt:");
 
+     // read from the file until there's nothing else in it:
+     while (myFile.available()) {
+       char ch = myFile.read();
+       Print(ch);
+     }
+     // close the file:
+     myFile.close();
+    }
+  */
 }
 
 //파일 입력을 할 때 처음 입력한 부분이 사라지는 현상이 있는듯...
@@ -57,55 +73,50 @@ void loop()
     // Serial.println("Here1");
     if (ch == 128 ) {   //파일 전송 시작을 알리는 프로토콜 인식
       status = 1;
-      byte myfilew = 0b00111111;
-      myFile.write(myfilew); //아무것도 없는 거 일단 한번 입력해봄.
       Serial.println("Here2");
     }
     while (status == 1) {   //파일 데이터 프로토콜 인식
-      ch = (byte)BTSerial.read();
-      if (((ch >> 6) & 0b11) == 0b00) {
-        //Print(ch);
-        buffer[(num % 50)] = ch;
-        num++;
-        Serial.println(num);
-        if ((num % 50) == 0)
-        {
-          myFile.write(buffer, 50);
+      if (BTSerial.available()) {
+        ch = (byte)BTSerial.read();
+        if (((ch >> 6) & 0b11) == 0b00) {
+          Print(ch);
+          buffer[(num % 50)] = ch;
+          num++;
+          Serial.println(num);
+          if ((num % 50) == 0)
+            myFile.write(buffer, 50);
         }
+        else if ( ((ch >> 6) & 0b11) == 0b01) { //파일 전송 끝을 알리는 프로토콜 인식
+          status = 3;   //종료를 알리는 status
+          for (int i = 0; i < (num % 50); i++)
+            myFile.write(buffer[i]);
 
+          myFile.close();
+          Serial.println("Here3");
+          break;
+        }
+        // Serial.println(num);
       }
-      else if ( ((ch >> 6) & 0b11) == 0b01) { //파일 전송 끝을 알리는 프로토콜 인식
-        status = 3;   //종료를 알리는 status
-        for (int i = 0; i < (num % 50); i++)
-          myFile.write(buffer[i]);
-
-        myFile.close();
-        Serial.println("Here3");
-        break;
-      }
-      // Serial.println(num);
     }
   }
   while (status == 2 || status == 3 || status == 4) //파일 전송 및 입력이 다 끝났다면...
   {
     if (status == 3) {
-      Serial.println("Here4");
       myFile2 = SD.open("test1.txt");     //파일 여는 것을 한번만 실행하기 위해서.
       status = 2;
+      Serial.println("Here10");
       continue;
     }
     if (myFile2) {
-      Serial.println("Here5");
       if (status == 2) { //임시 status 값. 처음 읽는거 확인.
         status = 4;
-        Serial.println("Here6");
+
         byte ch = myFile2.read();
         Print(ch);
         Serial.println(myFile2.position());  //myFile.position() 함수가 현재 위치를 반환.
         Serial.println(pos);                //맨 처음 부분이 1인듯. 원래 0부터 나올텐데 여기서는 0으로 돌아가질 않음.
       }
       if (status == 4) {  //한번 읽고 난뒤에 버튼을 누른다면..
-        Serial.println("Here7");
         if (digitalRead(whitebtn) == LOW && myFile2.available()) {
           pos++;
           myFile2.seek(pos);
@@ -128,22 +139,27 @@ void loop()
     }
     delay(175);
   }
-      //채터링 방지 이거를 파일 전송및 입력이 다끝난 후..
+  //채터링 방지 이거를 파일 전송및 입력이 다끝난 후..
   // 파일을 읽어 올 때 안에다가 넣어야 하지만 지금 실험중이기 때문에 밖에 꺼내놓음.
+
 }
 
 void Print(char ch) {
   int i;
-  for (i = 5; i >= 0; i--)
+  for (i = 0; i < 3; i++)
   {
-    if (((ch >> i) & 0x1) == 1)
-      Serial.print('O');
-    else if (((ch >> i) & 0x1) == 0)
-      Serial.print('X');
-    if (i == 4 || i == 2)
-      Serial.println();
+    if (((ch >> i) & 0b1) == 0b1)
+      Serial.print("O");
+    else if (((ch >> i) & 0b1) == 0b0)
+      Serial.print("X");
+    if (((ch >> (i + 3)) & 0b1) == 0b1)
+      Serial.print("O");
+    else if (((ch >> (i + 3)) & 0b1) == 0b0)
+      Serial.print("X");
+    Serial.println("");
   }
   Serial.println("");
   Serial.println("========");
+
 }
 
