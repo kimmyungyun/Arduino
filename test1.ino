@@ -21,7 +21,7 @@ const int cellCount = 8;
 byte cells[cellCount];
 
 const int redbtn = 0;   //left btn
-const int whitebtn = 1; //right btn
+const int whitebtn =1; //right btn
 unsigned long pos = 0;    //현재 위치 변수.
 unsigned long pos2 = 4;
 #include <SPI.h>
@@ -56,6 +56,9 @@ void setup()
   pinMode(CLOCK,  OUTPUT);
 
   digitalWrite(ON, 0);  // 0=ON, 1=OFF  //DC-DC Converter On   0 = ON, 1 = OFF
+
+digitalWrite(whitebtn, HIGH);
+digitalWrite(redbtn, HIGH);  
   
   int i = 0;
   pinMode(redbtn, INPUT_PULLUP);
@@ -130,26 +133,31 @@ Serial.println(size);
         for (i = pos; i <= pos2; i++) {
           myFile2.seek(i);
           byte ch = myFile2.read();
+          Read_Braille(ch,i); // 점자 튀어나오기.
           Print(ch);
+          
           flag = false;
         }
         Serial.println(myFile2.position());  //myFile.position() 함수가 현재 위치를 반환.
         Serial.println(pos);                //맨 처음 부분이 1인듯. 원래 0부터 나올텐데 여기서는 0으로 돌아가질 않음.
       }
       if (status == 4) {  //한번 읽고 난뒤에 버튼을 누른다면..
-        if ((digitalRead(whitebtn) == HIGH) && (myFile2.available()+1)) {
+        if ((digitalRead(whitebtn) == LOW) && (myFile2.available()+1)) {
           if ((pos2 + 5) <= size) {
             pos = pos + 5;
             pos2 = pos2 + 5;
             flag = true;
+            Serial.println(flag);
             Serial.println("Here122");
+            digitalWrite(whitebtn, HIGH);
           }
         }
-        if ((digitalRead(redbtn) == HIGH) && (myFile2.available()+1)) {
+        if ((digitalRead(redbtn) == LOW) && (myFile2.available()+1)) {
           if (pos > 0 && pos2 > 5) {
             pos = pos - 5;
             pos2 = pos2 - 5;
             flag = true;
+            digitalWrite(redbtn, HIGH);
             Serial.println("Here133");
           }
         }
