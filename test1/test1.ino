@@ -70,17 +70,9 @@ void setup()
   pinMode(bluebtn, INPUT_PULLUP);
   Serial.begin(115200);                                     // 아두이노의 시리얼 속도를 9600 으로 설정
   BTSerial.begin(115200);                                  // 블루투스의 시리얼 속도를 9600 으로 설정
-  //SD카드 초기화 SD.begin(4)는 CS핀 번호
   if (!SD.begin(4)) {
     return;
   }
-
-  if (SD.exists("test1.dat"))
-    SD.remove("test1.dat");
-  // test.txt 파일을 쓰기 위해서 Open한다
-  //여기서 블루투스 로부터 파일 명을 받아 온 후 만들어야 할듯.
-  //파일 쓰기 이어서 써진다. 전에꺼 지우고, 다시 만들어서 해야되.
-  myFile = SD.open("test1.dat", FILE_WRITE);
 }
 
 void loop()
@@ -88,11 +80,22 @@ void loop()
   int i;
   //있는 파일 그래도 읽을때
   if ((digitalRead(redbtn) == LOW) ) {
-    readFile();
+    Serial.println("파일 읽기 시작.");
+    ReadFile();
   }
   //블루투스로 읽을 때
-  else if ((digitalRead(whitebtn) == LOW)) {
-    blueToothFlag = true
+  else if ((digitalRead(whitebtn) == LOW) && !blueToothFlag) {
+    Serial.println("블루투스 시작.");
+    blueToothFlag = true;
+    //SD카드 초기화 SD.begin(4)는 CS핀 번호
+
+
+    if (SD.exists("test1.dat"))
+      SD.remove("test1.dat");
+    // test.txt 파일을 쓰기 위해서 Open한다
+    //여기서 블루투스 로부터 파일 명을 받아 온 후 만들어야 할듯.
+    //파일 쓰기 이어서 써진다. 전에꺼 지우고, 다시 만들어서 해야되.
+    myFile = SD.open("test1.dat", FILE_WRITE);
     while (blueToothFlag)
     {
       if (BTSerial.available()) {
@@ -287,52 +290,63 @@ void Flush ()
 void BrailleUp() {
   int x, i;
   //종료
-  if ((digitalRead(redbtn) == LOW) && (myFile2.available() + 1) && (digitalRead(whitebtn) == LOW) && (digitalRead(bluebtn) == LOW) )
-    {
-      status = 0;
-      readExitFlag = false;
-    }
-  //책갈피로 이동.
-  if ((digitalRead(whitebtn) == LOW) && (myFile2.available() + 1) && (digitalRead(bluebtn) == LOW)) {
-    if (SD.exists("bookmark.dat"))  //북마크 파일이 있는지 확인
-    {
-      myFile = SD.open("bookmark.dat");
-      x = myFile.read();
-      pos = x;
-      pos2 = x + 4;
-      flag = true;
-    }
-  }
+  if ((digitalRead(redbtn) == LOW) && (digitalRead(whitebtn) == LOW) && (digitalRead(bluebtn) == LOW) )
+  {
+    status = 0;
 
-  //그냥 오른쪽으로 이동.
-  else if ((digitalRead(whitebtn) == LOW) && (myFile2.available() + 1) && (digitalRead(bluebtn) == HIGH) ) {
-    if ((pos2 + 5) <= size) {
-      pos = pos + 5;
-      pos2 = pos2 + 5;
-      flag = true;
-      Serial.println(flag);
-      Serial.println("Here122");
-      digitalWrite(whitebtn, HIGH);
+  digitalWrite(whitebtn, HIGH);
+  digitalWrite(redbtn, HIGH);
+  digitalWrite(bluebtn, HIGH);
+    
+    Serial.println("exit");
+    readExitFlag = false;
+    blueToothFlag = false;
+  } else {
+    //책갈피로 이동.
+    if ((digitalRead(whitebtn) == LOW) && (digitalRead(bluebtn) == LOW)) {
+      if (SD.exists("bookmark.dat"))  //북마크 파일이 있는지 확인
+      {
+        myFile = SD.open("bookmark.dat");
+        x = myFile.read();
+        pos = x;
+        pos2 = x + 4;
+        flag = true;
+      }
+      Serial.println("책갈피 이동");
     }
-  }
-  if ((digitalRead(redbtn) == LOW) && (myFile2.available() + 1)) {
-    if (pos > 0 && pos2 > 5) {
-      pos = pos - 5;
-      pos2 = pos2 - 5;
-      flag = true;
-      digitalWrite(redbtn, HIGH);
-      Serial.println("Here133");
-    }
-  }
-  //책갈피 만들기.
-  if ((digitalRead(bluebtn) == LOW) && (myFile2.available() + 1)) {
-    if (SD.exists("bookmark.dat"))  //북마크 파일이 있으면 지움.
-      SD.remove("bookmark.dat");
-    //북마크 파일을 열음.
-    myFile = SD.open("bookmark.dat", FILE_WRITE);
-    myFile.write(pos);
-  }
 
+    //그냥 오른쪽으로 이동.
+    if ((digitalRead(whitebtn) == LOW) && (myFile2.available() + 1) ) {
+      if ((pos2 + 5) <= size) {
+        pos = pos + 5;
+        pos2 = pos2 + 5;
+        flag = true;
+        digitalWrite(whitebtn, HIGH);
+      }
+      Serial.println("오른쪽 이동");
+    }
+    if ((digitalRead(redbtn) == LOW) && (myFile2.available() + 1)) {
+      if (pos > 0 && pos2 > 5) {
+        pos = pos - 5;
+        pos2 = pos2 - 5;
+        flag = true;
+        digitalWrite(redbtn, HIGH);
+        Serial.println("Here133");
+      }
+      Serial.println("왼쪽 이동");
+    }
+    //책갈피 만들기.
+    if ((digitalRead(bluebtn) == LOW) && (myFile2.available() + 1)) {
+      if (SD.exists("bookmark.dat"))  //북마크 파일이 있으면 지움.
+        SD.remove("bookmark.dat");
+      //북마크 파일을 열음.
+      myFile = SD.open("bookmark.dat", FILE_WRITE);
+      myFile.write(pos);
+      digitalWrite(bluebtn, HIGH);
+      Serial.println("책갈피 등록");
+    }
+    
+  }
   if (flag) {
     Initial_Braille();
     for (i = pos; i <= pos2; i++) {
@@ -346,8 +360,9 @@ void BrailleUp() {
   delay(175);     //채터링 방지 이거를 파일 전송및 입력이 다끝난 후..
 }
 void ReadFile() {
+  int i;
   //파일 읽어오는 걸로 버튼을 눌렀는데, 파일이 존재한다면.
-  if (SD.exists("test1.dat")) {s
+  if (SD.exists("test1.dat")) {
     ReSize();
     myFile2 = SD.open("test1.dat");
     //처음에 점자 튀어나오게 하기
