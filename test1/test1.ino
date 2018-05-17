@@ -20,9 +20,10 @@ const int CLOCK  =  8;  // Backpanel Pin 4 (CLK)
 const int cellCount = 8;
 byte cells[cellCount];
 
-const int redbtn = 0;   // 빨간 버튼
-const int whitebtn = 1; // 흰색 버튼
-const int bluebtn = 9; // 파란 버튼
+const int redbtn = 14;   // 빨간 버튼
+const int bluebtn = 15; // 파란 버튼
+const int whitebtn = 16; // 흰색 버튼
+
 unsigned long pos = 0;    //현재 위치 변수.
 unsigned long pos2 = 4;
 #include <SPI.h>
@@ -57,17 +58,13 @@ void setup()
   pinMode(DATA,   OUTPUT);
   pinMode(STROBE, OUTPUT);
   pinMode(CLOCK,  OUTPUT);
-
+  pinMode(redbtn, INPUT);
+  pinMode(bluebtn, INPUT);
+  pinMode(whitebtn, INPUT);
   digitalWrite(ON, 0);  // 0=ON, 1=OFF  //DC-DC Converter On   0 = ON, 1 = OFF
 
-  digitalWrite(whitebtn, HIGH);
-  digitalWrite(redbtn, HIGH);
-  digitalWrite(bluebtn, HIGH);
 
   int i = 0;
-  pinMode(redbtn, INPUT_PULLUP);
-  pinMode(whitebtn, INPUT_PULLUP);
-  pinMode(bluebtn, INPUT_PULLUP);
   Serial.begin(115200);                                     // 아두이노의 시리얼 속도를 9600 으로 설정
   BTSerial.begin(115200);                                  // 블루투스의 시리얼 속도를 9600 으로 설정
   if (!SD.begin(4)) {
@@ -79,12 +76,20 @@ void loop()
 {
   int i;
   //있는 파일 그래도 읽을때
-  if ((digitalRead(redbtn) == LOW) ) {
+  int redpin = analogRead(redbtn);
+  int bluepin = analogRead(bluebtn);
+  int whitepin = analogRead(whitebtn);
+  Serial.print(redpin);
+  Serial.print("  ");
+  Serial.print(bluepin);
+  Serial.print("  ");
+  Serial.println(whitepin);
+  if ((redpin == 0) ) {
     Serial.println("파일 읽기 시작.");
     ReadFile();
   }
   //블루투스로 읽을 때
-  else if ((digitalRead(whitebtn) == LOW) && !blueToothFlag) {
+  else if ((bluepin == 0) && !blueToothFlag) {
     Serial.println("블루투스 시작.");
     blueToothFlag = true;
     //SD카드 초기화 SD.begin(4)는 CS핀 번호
@@ -288,64 +293,67 @@ void Flush ()
 
 // 18.05.13 버튼을 누를시 점자출력부분이 넘어가는 부분.
 void BrailleUp() {
+
+  int redpin = analogRead(redbtn);
+  int bluepin = analogRead(bluebtn);
+  int whitepin = analogRead(whitebtn);
+
   int x, i;
   //종료
-  if ((digitalRead(redbtn) == LOW) && (digitalRead(whitebtn) == LOW) && (digitalRead(bluebtn) == LOW) )
+  if ((redpin == 0) && (bluepin == 0) && (whitepin == 0) )
   {
     status = 0;
-
-  digitalWrite(whitebtn, HIGH);
-  digitalWrite(redbtn, HIGH);
-  digitalWrite(bluebtn, HIGH);
-    
     Serial.println("exit");
     readExitFlag = false;
     blueToothFlag = false;
   } else {
     //책갈피로 이동.
-    if ((digitalRead(whitebtn) == LOW) && (digitalRead(bluebtn) == LOW)) {
+    if ((whitepin == 0) && (bluepin == 0)) {
       if (SD.exists("bookmark.dat"))  //북마크 파일이 있는지 확인
       {
         myFile = SD.open("bookmark.dat");
         x = myFile.read();
+        Serial.println("책갈피위치 : ");
+        Serial.println(x);
         pos = x;
         pos2 = x + 4;
         flag = true;
+        myFile.close();
       }
       Serial.println("책갈피 이동");
     }
 
     //그냥 오른쪽으로 이동.
-    if ((digitalRead(whitebtn) == LOW) && (myFile2.available() + 1) ) {
+    if ((whitepin == 0) && (myFile2.available() + 1) && (bluepin != 0) ) {
       if ((pos2 + 5) <= size) {
         pos = pos + 5;
         pos2 = pos2 + 5;
         flag = true;
-        digitalWrite(whitebtn, HIGH);
       }
       Serial.println("오른쪽 이동");
     }
-    if ((digitalRead(redbtn) == LOW) && (myFile2.available() + 1)) {
+    if ((redpin == 0) && (myFile2.available() + 1) && (bluepin != 0)) {
       if (pos > 0 && pos2 > 5) {
         pos = pos - 5;
         pos2 = pos2 - 5;
         flag = true;
-        digitalWrite(redbtn, HIGH);
         Serial.println("Here133");
       }
       Serial.println("왼쪽 이동");
     }
     //책갈피 만들기.
-    if ((digitalRead(bluebtn) == LOW) && (myFile2.available() + 1)) {
+    if ((bluepin == 0) && (myFile2.available() + 1) && ((redpin != 0)) && ((whitepin != 0))) {
+      Serial.println("책갈피 쓸 때 : ");
+        Serial.println(pos);
       if (SD.exists("bookmark.dat"))  //북마크 파일이 있으면 지움.
         SD.remove("bookmark.dat");
       //북마크 파일을 열음.
       myFile = SD.open("bookmark.dat", FILE_WRITE);
       myFile.write(pos);
-      digitalWrite(bluebtn, HIGH);
       Serial.println("책갈피 등록");
+      myFile.close();
     }
-    
+
   }
   if (flag) {
     Initial_Braille();
