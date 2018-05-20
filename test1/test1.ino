@@ -103,6 +103,13 @@ void loop()
     myFile = SD.open("test1.dat", FILE_WRITE);
     while (blueToothFlag)
     {
+      if ((redpin == 0) && (bluepin == 0) && (whitepin == 0) )
+      {
+        status = 0;
+        Serial.println("exit");
+        readExitFlag = false;
+        blueToothFlag = false;
+      }
       if (BTSerial.available()) {
         byte ch = (byte)BTSerial.read();
         // Serial.println(ch);
@@ -344,7 +351,7 @@ void BrailleUp() {
     //책갈피 만들기.
     if ((bluepin == 0) && (myFile2.available() + 1) && ((redpin != 0)) && ((whitepin != 0))) {
       Serial.println("책갈피 쓸 때 : ");
-        Serial.println(pos);
+      Serial.println(pos);
       if (SD.exists("bookmark.dat"))  //북마크 파일이 있으면 지움.
         SD.remove("bookmark.dat");
       //북마크 파일을 열음.
