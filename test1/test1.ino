@@ -23,6 +23,12 @@ byte cells[cellCount];
 const int redbtn = 14;   // 빨간 버튼
 const int bluebtn = 15; // 파란 버튼
 const int whitebtn = 16; // 흰색 버튼
+const int bluebtn2 = 17;  // 두번째 파랑
+
+int redpin ;
+int bluepin ;
+int whitepin;
+int bluepin2 ;
 
 unsigned long pos = 0;    //현재 위치 변수.
 unsigned long pos2 = 4;
@@ -58,13 +64,14 @@ void setup()
   pinMode(DATA,   OUTPUT);
   pinMode(STROBE, OUTPUT);
   pinMode(CLOCK,  OUTPUT);
+
   pinMode(redbtn, INPUT);
   pinMode(bluebtn, INPUT);
   pinMode(whitebtn, INPUT);
+  pinMode(bluebtn2, INPUT);
+
   digitalWrite(ON, 0);  // 0=ON, 1=OFF  //DC-DC Converter On   0 = ON, 1 = OFF
 
-
-  int i = 0;
   Serial.begin(115200);                                     // 아두이노의 시리얼 속도를 9600 으로 설정
   BTSerial.begin(115200);                                  // 블루투스의 시리얼 속도를 9600 으로 설정
   if (!SD.begin(4)) {
@@ -76,47 +83,76 @@ void loop()
 {
   int i;
   //있는 파일 그래도 읽을때
-  int redpin = analogRead(redbtn);
-  int bluepin = analogRead(bluebtn);
-  int whitepin = analogRead(whitebtn);
+  redpin = analogRead(redbtn);
+  bluepin = analogRead(bluebtn);
+  whitepin = analogRead(whitebtn);
+  bluepin2 = analogRead(bluebtn2);
+
   Serial.print(redpin);
   Serial.print("  ");
   Serial.print(bluepin);
   Serial.print("  ");
-  Serial.println(whitepin);
-  if ((redpin == 0) ) {
+  Serial.print(whitepin);
+  Serial.print("  ");
+  Serial.println(bluepin2);
+  delay(100);
+  if ((redpin == 0) && (bluepin != 0 ) && ( whitepin != 0) && (bluepin2 != 0) ) {
     Serial.println("파일 읽기 시작.");
     ReadFile();
   }
   //블루투스로 읽을 때
-  else if ((bluepin == 0) && !blueToothFlag) {
+  else if ((bluepin == 0) && !blueToothFlag && (redpin != 0) && ( whitepin != 0) && (bluepin2 != 0)) {
     Serial.println("블루투스 시작.");
     blueToothFlag = true;
     //SD카드 초기화 SD.begin(4)는 CS핀 번호
 
-
-    if (SD.exists("test1.dat"))
-      SD.remove("test1.dat");
-    // test.txt 파일을 쓰기 위해서 Open한다
-    //여기서 블루투스 로부터 파일 명을 받아 온 후 만들어야 할듯.
-    //파일 쓰기 이어서 써진다. 전에꺼 지우고, 다시 만들어서 해야되.
-    myFile = SD.open("test1.dat", FILE_WRITE);
     while (blueToothFlag)
     {
-      if ((redpin == 0) && (bluepin == 0) && (whitepin == 0) )
+      delay(150);
+      redpin = analogRead(redbtn);
+      bluepin = analogRead(bluebtn);
+      whitepin = analogRead(whitebtn);
+      bluepin2 = analogRead(bluebtn2);
+      Serial.print(redpin);
+      Serial.print("  ");
+      Serial.print(bluepin);
+      Serial.print("  ");
+      Serial.print(whitepin);
+      Serial.print("  ");
+      Serial.println(bluepin2);
+      if ((bluepin2 == 0) && (bluepin != 0) && (redpin != 0) && (whitepin != 0) )
       {
         status = 0;
         Serial.println("exit");
         readExitFlag = false;
         blueToothFlag = false;
+        delay(100);
+        Initial_Braille();
+        Flush();
+        Serial.println("블루투스 종료");
       }
       if (BTSerial.available()) {
         byte ch = (byte)BTSerial.read();
+        if (bluepin2 == 0 && (bluepin != 0) && (redpin != 0) && (whitepin != 0))
+        {
+          status = 0;
+          Serial.println("exit");
+          readExitFlag = false;
+          blueToothFlag = false;
+          delay(100);
+          Serial.println("블루투스 종료");
+        }
         // Serial.println(ch);
         // Serial.println("Here1");
         if (ch == 128 ) {   //파일 전송 시작을 알리는 프로토콜 인식
           status = 1;
           Serial.println("Here2");
+          if (SD.exists("test1.dat"))
+            SD.remove("test1.dat");
+          // test.txt 파일을 쓰기 위해서 Open한다
+          //여기서 블루투스 로부터 파일 명을 받아 온 후 만들어야 할듯.
+          //파일 쓰기 이어서 써진다. 전에꺼 지우고, 다시 만들어서 해야되.
+          myFile = SD.open("test1.dat", FILE_WRITE);
         }
         while (status == 1) {   //파일 데이터 프로토콜 인식
           if (BTSerial.available()) {
@@ -301,21 +337,24 @@ void Flush ()
 // 18.05.13 버튼을 누를시 점자출력부분이 넘어가는 부분.
 void BrailleUp() {
 
-  int redpin = analogRead(redbtn);
-  int bluepin = analogRead(bluebtn);
-  int whitepin = analogRead(whitebtn);
+  redpin = analogRead(redbtn);
+  bluepin = analogRead(bluebtn);
+  whitepin = analogRead(whitebtn);
+  bluepin2 = analogRead(bluebtn2);
 
   int x, i;
   //종료
-  if ((redpin == 0) && (bluepin == 0) && (whitepin == 0) )
+  if ((bluepin2 == 0) && (redpin != 0 ) && (bluepin != 0) && (whitepin != 0) )
   {
     status = 0;
     Serial.println("exit");
     readExitFlag = false;
     blueToothFlag = false;
+    Initial_Braille();
+    Flush();
   } else {
     //책갈피로 이동.
-    if ((whitepin == 0) && (bluepin == 0)) {
+    if ((whitepin == 0) && (bluepin == 0) && (redpin != 0) && (bluepin2 != 0)) {
       if (SD.exists("bookmark.dat"))  //북마크 파일이 있는지 확인
       {
         myFile = SD.open("bookmark.dat");
@@ -331,7 +370,7 @@ void BrailleUp() {
     }
 
     //그냥 오른쪽으로 이동.
-    if ((whitepin == 0) && (myFile2.available() + 1) && (bluepin != 0) ) {
+    if ((whitepin == 0) && (myFile2.available() + 1) && (bluepin != 0) && (redpin != 0) && (bluepin2 != 0)) {
       if ((pos2 + 5) <= size) {
         pos = pos + 5;
         pos2 = pos2 + 5;
@@ -339,7 +378,7 @@ void BrailleUp() {
       }
       Serial.println("오른쪽 이동");
     }
-    if ((redpin == 0) && (myFile2.available() + 1) && (bluepin != 0)) {
+    if ((redpin == 0) && (myFile2.available() + 1) && (bluepin != 0) && (whitepin != 0) && (bluepin2 != 0)) {
       if (pos > 0 && pos2 > 5) {
         pos = pos - 5;
         pos2 = pos2 - 5;
@@ -349,7 +388,7 @@ void BrailleUp() {
       Serial.println("왼쪽 이동");
     }
     //책갈피 만들기.
-    if ((bluepin == 0) && (myFile2.available() + 1) && ((redpin != 0)) && ((whitepin != 0))) {
+    if ((bluepin == 0) && (myFile2.available() + 1) && ((redpin != 0)) && ((whitepin != 0)) && (bluepin2 != 0)) {
       Serial.println("책갈피 쓸 때 : ");
       Serial.println(pos);
       if (SD.exists("bookmark.dat"))  //북마크 파일이 있으면 지움.
